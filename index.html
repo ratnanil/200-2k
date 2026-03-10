@@ -136,6 +136,7 @@
     <div class="dash-header">
       <h1>🚴 Training Dashboard <span class="week-badge" id="week-badge"></span></h1>
       <div class="dash-actions">
+        <a class="btn btn-sm btn-ghost" href="https://flatgithub.com/ratnanil/200-2k?filename=plan.csv" target="_blank" rel="noopener">Plan</a>
         <button class="btn btn-sm btn-ghost" id="refresh-btn">↻ Sync</button>
         <button class="btn btn-sm btn-ghost" id="goals-btn">Goals</button>
         <button class="btn btn-sm btn-danger" id="disconnect-btn">Disconnect</button>
@@ -172,11 +173,11 @@
     <!-- Plan vs Actual — training block -->
     <div class="charts-grid" id="plan-charts">
       <div class="card">
-        <div class="card-title">Distance: Plan vs Actual (km)</div>
+        <div class="card-title">Weekly distance (km)</div>
         <canvas id="chart-plan-distance"></canvas>
       </div>
       <div class="card">
-        <div class="card-title">Elevation: Plan vs Actual (m)</div>
+        <div class="card-title">Weekly elevation (m)</div>
         <canvas id="chart-plan-elevation"></canvas>
       </div>
     </div>
@@ -184,11 +185,11 @@
     <!-- Rolling 4-week load -->
     <div class="charts-grid">
       <div class="card">
-        <div class="card-title">Rolling 4-week Distance (km)</div>
+        <div class="card-title">Rolling 4-week distance (km)</div>
         <canvas id="chart-roll4-distance"></canvas>
       </div>
       <div class="card">
-        <div class="card-title">Rolling 4-week Elevation (m)</div>
+        <div class="card-title">Rolling 4-week elevation (m)</div>
         <canvas id="chart-roll4-elevation"></canvas>
       </div>
     </div>
@@ -196,11 +197,11 @@
     <!-- Longest ride + Goal readiness -->
     <div class="charts-grid">
       <div class="card">
-        <div class="card-title">Longest Ride (km) — Plan vs Actual, weekly + rolling 4w</div>
+        <div class="card-title">Longest ride (km)</div>
         <canvas id="chart-longest"></canvas>
       </div>
       <div class="card">
-        <div class="card-title" id="goal-readiness-title">Distance Goal Readiness — longest ride (rolling 4w) / 200 km</div>
+        <div class="card-title" id="goal-readiness-title">Goal readiness (rolling 4w longest / 200 km)</div>
         <canvas id="chart-goal-readiness"></canvas>
       </div>
     </div>
@@ -375,11 +376,12 @@ function calcWeeklyMetrics(rides) {
   const weeks = {};
   for (const r of rides) {
     const k = isoWeekKey(r.date);
-    if (!weeks[k]) weeks[k] = { distance: 0, elevation: 0, longest: 0, rides: 0 };
+    if (!weeks[k]) weeks[k] = { distance: 0, elevation: 0, longest: 0, rides: 0, _days: new Set() };
     weeks[k].distance  += r.distance;
     weeks[k].elevation += r.elevation;
     weeks[k].longest    = Math.max(weeks[k].longest, r.distance);
-    weeks[k].rides     += 1;
+    weeks[k]._days.add(r.date);
+    weeks[k].rides      = weeks[k]._days.size;
   }
   return weeks;
 }
@@ -556,7 +558,7 @@ function renderLongestRideChart(id, labels, planWeekly, actWeekly, planRoll4, ac
 function renderGoalReadinessChart(id, labels, planRatios, actRatios, goalDist) {
   if (chartCache[id]) chartCache[id].destroy();
   document.getElementById('goal-readiness-title').textContent =
-    `Distance Goal Readiness — longest ride (rolling 4w) / ${goalDist} km`;
+    `Goal readiness (rolling 4w longest / ${goalDist} km)`;
   const ctx = document.getElementById(id).getContext('2d');
   const threshold = v => labels.map(() => v);
   chartCache[id] = new Chart(ctx, {
@@ -647,7 +649,7 @@ function renderThisWeek(weekData, goals) {
     { label: 'Distance',     value: d.distance.toFixed(0),  unit: 'km', goal: goals.distance },
     { label: 'Elevation',    value: d.elevation.toFixed(0), unit: 'm',  goal: goals.elevation },
     { label: 'Longest ride', value: d.longest.toFixed(0),   unit: 'km', goal: goals.longest },
-    { label: 'Rides',        value: d.rides,                unit: '',   goal: goals.rides },
+    { label: 'Days with rides', value: d.rides,              unit: '',   goal: goals.rides },
   ];
   document.getElementById('this-week-metrics').innerHTML = items.map(m => {
     const p = pct(m.value, m.goal);

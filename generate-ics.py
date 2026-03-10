@@ -23,7 +23,7 @@ with open('plan.csv', newline='') as f:
             'BEGIN:VEVENT',
             f'DTSTART;VALUE=DATE:{d.replace("-", "")}',
             f'DTEND;VALUE=DATE:{next_day(d)}',
-            f'SUMMARY:{typ} \u2013 {km} km',
+            f'SUMMARY:{typ} \u2013 {km} km / {hm} m',
             f'DESCRIPTION:{km} km / {hm} m elevation',
             f'UID:{uid}',
             'END:VEVENT',
