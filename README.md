@@ -29,8 +29,11 @@ Chart x-axis labels use ISO calendar weeks (KW11, KW12, …).
 ## Files
 
 ```
-index.html   — the entire app (HTML + CSS + JS, no build step, no dependencies to install)
-README.md    — this file
+index.html          — the app (HTML + CSS + JS, no build step, no dependencies to install)
+plan.csv            — training plan data (edit this to update the plan)
+plan.ics            — generated calendar file (do not edit manually)
+generate-ics.py     — script that builds plan.ics from plan.csv
+README.md           — this file
 ```
 
 Runtime dependency loaded from CDN:
@@ -74,15 +77,13 @@ const DEV_MODE = true; // set back to false before pushing
 
 ## Updating the training plan
 
-The plan is a plain JS array near the top of the `<script>` block in `index.html`:
+Edit `plan.csv` directly — in a text editor, LibreOffice Calc, or any spreadsheet tool:
 
-```js
-const TRAINING_PLAN = [
-  { date: "2026-03-10", type: "Commute",   km: 56,  hm: 0   },
-  { date: "2026-03-12", type: "Hills",     km: 40,  hm: 500 },
-  { date: "2026-03-15", type: "Long ride", km: 70,  hm: 700 },
-  // ...
-];
+```
+date,type,km,hm
+2026-03-10,Commute,56,0
+2026-03-12,Hills,40,500
+2026-03-15,Long ride,70,700
 ```
 
 | Field  | Type   | Description |
@@ -92,9 +93,18 @@ const TRAINING_PLAN = [
 | `km`   | number | Planned distance in kilometres |
 | `hm`   | number | Planned elevation gain in metres |
 
-Weeks are derived automatically from the date using ISO week numbers (Monday–Sunday). To add a new training block, replace or extend the array and push — no other changes needed.
+Weeks are derived automatically from the date using ISO week numbers (Monday–Sunday). To add a new training block, replace or extend the file and push — no other changes needed.
 
-To add a new ride type with a custom badge colour, add an entry to `TYPE_STYLE`:
+A formatted view of the plan is available at:
+`https://flatgithub.com/ratnanil/200-2k?filename=plan.csv`
+
+### Calendar subscription (ICS)
+
+Pushing a change to `plan.csv` automatically triggers a GitHub Actions workflow that regenerates `plan.ics` and commits it back to `main`. Once live on GitHub Pages, you can subscribe to the plan in any calendar app (iOS Calendar, Google Calendar, Thunderbird) via:
+
+`https://ratnanil.github.io/200-2k/plan.ics`
+
+To add a new ride type with a custom badge colour, add an entry to `TYPE_STYLE` in `index.html`:
 
 ```js
 const TYPE_STYLE = {
@@ -105,7 +115,7 @@ const TYPE_STYLE = {
 };
 ```
 
-The event goal distance (used for the readiness chart) is derived automatically as the maximum single-ride `km` value in `TRAINING_PLAN` (currently 200 km).
+The event goal distance (used for the readiness chart) is derived automatically as the maximum single-ride `km` value in `plan.csv` (currently 200 km).
 
 ## Architecture notes
 
