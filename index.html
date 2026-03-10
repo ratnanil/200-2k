@@ -38,13 +38,14 @@
     .dash { max-width: 960px; margin: 0 auto; padding: 1.5rem; }
     .dash-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.8rem; }
     .dash-header h1 { font-size: 1.25rem; }
+    .dash-header .week-badge { font-size: 0.78rem; color: #aaa; font-weight: 400; margin-left: 0.6rem; }
     .dash-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 
     .card { background: white; border-radius: 12px; padding: 1.4rem; box-shadow: 0 1px 8px rgba(0,0,0,0.06); }
     .card-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #999; margin-bottom: 1rem; }
 
     /* ── This-week metrics ── */
-    .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1.2rem; margin-bottom: 1.4rem; }
+    .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1.2rem; }
     .metric-value { font-size: 2rem; font-weight: 800; line-height: 1; }
     .metric-unit { font-size: 1rem; font-weight: 400; color: #aaa; }
     .metric-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #aaa; margin-bottom: 0.35rem; }
@@ -61,6 +62,14 @@
     .goals-panel .goals-row { margin-top: 0.5rem; }
     .goals-panel .btn { margin-top: 1rem; }
 
+    /* ── Plan rides ── */
+    .plan-rides { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+    .plan-ride { display: flex; justify-content: space-between; align-items: center; padding: 0.55rem 0.8rem; background: #f8f8f8; border-radius: 8px; font-size: 0.85rem; }
+    .plan-ride-left { display: flex; align-items: center; gap: 0.6rem; }
+    .plan-ride-date { color: #aaa; font-size: 0.78rem; }
+    .plan-ride-stats { color: #555; font-weight: 600; white-space: nowrap; }
+    .badge { font-size: 0.7rem; font-weight: 700; padding: 0.2em 0.55em; border-radius: 4px; white-space: nowrap; }
+
     /* ── Sync info ── */
     .sync-info { font-size: 0.78rem; color: #bbb; text-align: right; margin-bottom: 0.6rem; }
 
@@ -68,6 +77,7 @@
     .hidden { display: none !important; }
     .error-banner { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; border-radius: 8px; padding: 0.8rem 1rem; margin-bottom: 1rem; font-size: 0.88rem; }
     .loading-msg { text-align: center; padding: 3rem 1rem; color: #aaa; font-size: 0.9rem; }
+    .mb { margin-bottom: 1.4rem; }
   </style>
 </head>
 <body>
@@ -77,7 +87,7 @@
   <div class="setup-wrap">
     <div class="setup">
       <h1>🚴 Training Dashboard</h1>
-      <p class="subtitle">Connects to your Strava account and shows weekly metrics vs. your goals. One-time setup, then automatic.</p>
+      <p class="subtitle">Connects to your Strava account and shows weekly metrics vs. your plan. One-time setup, then automatic.</p>
 
       <div class="setup-section">
         <h2>1 · Create a Strava API app</h2>
@@ -93,7 +103,7 @@
       </div>
 
       <div class="setup-section">
-        <h2>2 · Set your weekly goals</h2>
+        <h2>2 · Fallback weekly goals (used outside training block)</h2>
         <div class="goals-row">
           <div>
             <label for="g-distance">Distance (km)</label>
@@ -124,7 +134,7 @@
 <div id="dashboard-screen" class="hidden">
   <div class="dash">
     <div class="dash-header">
-      <h1>🚴 Training Dashboard</h1>
+      <h1>🚴 Training Dashboard <span class="week-badge" id="week-badge"></span></h1>
       <div class="dash-actions">
         <button class="btn btn-sm btn-ghost" id="refresh-btn">↻ Sync</button>
         <button class="btn btn-sm btn-ghost" id="goals-btn">Goals</button>
@@ -135,52 +145,58 @@
     <div id="error-banner" class="error-banner hidden"></div>
     <div id="loading-msg" class="loading-msg hidden">Fetching your rides from Strava…</div>
 
-    <!-- Goals editor (hidden by default) -->
+    <!-- Fallback goals editor -->
     <div id="goals-panel" class="card goals-panel hidden">
-      <div class="card-title">Weekly Goals</div>
+      <div class="card-title">Fallback Weekly Goals (outside training block)</div>
       <div class="goals-row">
-        <div>
-          <label for="sg-distance">Distance (km)</label>
-          <input type="number" id="sg-distance" min="1">
-        </div>
-        <div>
-          <label for="sg-elevation">Elevation (m)</label>
-          <input type="number" id="sg-elevation" min="1">
-        </div>
-        <div>
-          <label for="sg-longest">Longest ride (km)</label>
-          <input type="number" id="sg-longest" min="1">
-        </div>
-        <div>
-          <label for="sg-rides">Rides per week</label>
-          <input type="number" id="sg-rides" min="1">
-        </div>
+        <div><label for="sg-distance">Distance (km)</label><input type="number" id="sg-distance" min="1"></div>
+        <div><label for="sg-elevation">Elevation (m)</label><input type="number" id="sg-elevation" min="1"></div>
+        <div><label for="sg-longest">Longest ride (km)</label><input type="number" id="sg-longest" min="1"></div>
+        <div><label for="sg-rides">Rides per week</label><input type="number" id="sg-rides" min="1"></div>
       </div>
-      <button class="btn btn-sm" id="save-goals-btn">Save Goals</button>
+      <button class="btn btn-sm" id="save-goals-btn">Save</button>
     </div>
 
-    <!-- This week -->
-    <div class="card" style="margin-bottom:1.4rem">
-      <div class="card-title">This Week</div>
+    <!-- This week: metrics vs plan -->
+    <div class="card mb">
+      <div class="card-title" id="this-week-title">This Week</div>
       <div class="metrics-grid" id="this-week-metrics"></div>
     </div>
 
-    <!-- Charts -->
+    <!-- This week: planned rides -->
+    <div class="card mb" id="plan-this-week">
+      <div class="card-title">Planned Rides This Week</div>
+      <ul class="plan-rides" id="plan-rides-list"></ul>
+    </div>
+
+    <!-- Plan vs Actual — training block -->
+    <div class="charts-grid" id="plan-charts">
+      <div class="card">
+        <div class="card-title">Distance: Plan vs Actual (km)</div>
+        <canvas id="chart-plan-distance"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-title">Elevation: Plan vs Actual (m)</div>
+        <canvas id="chart-plan-elevation"></canvas>
+      </div>
+    </div>
+
+    <!-- Historical charts -->
     <div class="charts-grid">
       <div class="card">
-        <div class="card-title">Weekly Distance (km)</div>
+        <div class="card-title">Weekly Distance — history (km)</div>
         <canvas id="chart-distance"></canvas>
       </div>
       <div class="card">
-        <div class="card-title">Weekly Elevation (m)</div>
+        <div class="card-title">Weekly Elevation — history (m)</div>
         <canvas id="chart-elevation"></canvas>
       </div>
       <div class="card">
-        <div class="card-title">Longest Ride (km)</div>
+        <div class="card-title">Longest Ride — history (km)</div>
         <canvas id="chart-longest"></canvas>
       </div>
       <div class="card">
-        <div class="card-title">Rides per Week</div>
+        <div class="card-title">Rides per Week — history</div>
         <canvas id="chart-rides"></canvas>
       </div>
     </div>
@@ -190,19 +206,71 @@
 </div>
 
 <script>
+// ═══════════════════════════════════════════════════════════════════════════
+// TRAINING PLAN
+// Update this whenever your plan changes. Dates as YYYY-MM-DD.
+// ═══════════════════════════════════════════════════════════════════════════
+const TRAINING_PLAN = [
+  // Week 1 (KW 11)
+  { date: "2026-03-10", type: "Commute",   km: 56,  hm: 0    },
+  { date: "2026-03-12", type: "Hills",     km: 40,  hm: 500  },
+  { date: "2026-03-15", type: "Long ride", km: 70,  hm: 700  },
+  // Week 2 (KW 12)
+  { date: "2026-03-17", type: "Commute",   km: 68,  hm: 0    },
+  { date: "2026-03-19", type: "Hills",     km: 45,  hm: 600  },
+  { date: "2026-03-22", type: "Long ride", km: 80,  hm: 800  },
+  // Week 3 (KW 13)
+  { date: "2026-03-24", type: "Commute",   km: 73,  hm: 0    },
+  { date: "2026-03-26", type: "Hills",     km: 50,  hm: 700  },
+  { date: "2026-03-29", type: "Long ride", km: 95,  hm: 900  },
+  // Week 4 (KW 14) — recovery
+  { date: "2026-03-31", type: "Commute",   km: 56,  hm: 0    },
+  { date: "2026-04-02", type: "Hills",     km: 35,  hm: 0    },
+  { date: "2026-04-05", type: "Long ride", km: 70,  hm: 0    },
+  // Week 5 (KW 15)
+  { date: "2026-04-07", type: "Commute",   km: 78,  hm: 0    },
+  { date: "2026-04-09", type: "Hills",     km: 55,  hm: 900  },
+  { date: "2026-04-12", type: "Long ride", km: 110, hm: 1200 },
+  // Week 6 (KW 16)
+  { date: "2026-04-14", type: "Commute",   km: 83,  hm: 0    },
+  { date: "2026-04-16", type: "Hills",     km: 60,  hm: 1000 },
+  { date: "2026-04-19", type: "Long ride", km: 125, hm: 1400 },
+  // Week 7 (KW 17)
+  { date: "2026-04-21", type: "Commute",   km: 88,  hm: 0    },
+  { date: "2026-04-23", type: "Hills",     km: 65,  hm: 1100 },
+  { date: "2026-04-26", type: "Long ride", km: 140, hm: 1600 },
+  // Week 8 (KW 18) — recovery
+  { date: "2026-04-28", type: "Commute",   km: 56,  hm: 0    },
+  { date: "2026-04-30", type: "Hills",     km: 45,  hm: 0    },
+  { date: "2026-05-03", type: "Long ride", km: 100, hm: 0    },
+  // Week 9 (KW 19)
+  { date: "2026-05-05", type: "Commute",   km: 78,  hm: 0    },
+  { date: "2026-05-07", type: "Hills",     km: 60,  hm: 1000 },
+  { date: "2026-05-10", type: "Long ride", km: 160, hm: 1800 },
+  // Week 10 (KW 20) — peak
+  { date: "2026-05-12", type: "Commute",   km: 56,  hm: 0    },
+  { date: "2026-05-14", type: "Hills",     km: 35,  hm: 0    },
+  { date: "2026-05-17", type: "Long ride", km: 200, hm: 2000 },
+];
+
+const TYPE_STYLE = {
+  "Commute":   { bg: "#e0f2fe", fg: "#0369a1" },
+  "Hills":     { bg: "#fef3c7", fg: "#92400e" },
+  "Long ride": { bg: "#f3e8ff", fg: "#7c3aed" },
+};
+
 // ── Constants ────────────────────────────────────────────────────────────────
 const STRAVA_AUTH   = 'https://www.strava.com/oauth/authorize';
 const STRAVA_TOKEN  = 'https://www.strava.com/oauth/token';
 const STRAVA_API    = 'https://www.strava.com/api/v3';
 const RIDE_TYPES    = new Set(['Ride','VirtualRide','GravelRide','MountainBikeRide','EBikeRide']);
 const WEEKS_SHOWN   = 16;
-const CACHE_TTL_MS  = 30 * 60 * 1000; // 30 min
+const CACHE_TTL_MS  = 30 * 60 * 1000;
 
 // ── Local storage helpers ────────────────────────────────────────────────────
 const ls = {
   get: k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
   set: (k, v) => localStorage.setItem(k, JSON.stringify(v)),
-  del: k => localStorage.removeItem(k),
 };
 
 const defaultGoals = () => ({ distance: 200, elevation: 3000, longest: 100, rides: 4 });
@@ -223,25 +291,19 @@ async function stravaPost(body) {
 }
 
 async function exchangeCode(code) {
-  const data = await stravaPost({
-    client_id: ls.get('client_id'),
-    client_secret: ls.get('client_secret'),
-    code,
-    grant_type: 'authorization_code',
-  });
-  storeTokens(data);
+  storeTokens(await stravaPost({
+    client_id: ls.get('client_id'), client_secret: ls.get('client_secret'),
+    code, grant_type: 'authorization_code',
+  }));
 }
 
 async function getAccessToken() {
   const expiry = ls.get('token_expiry');
   const token  = ls.get('access_token');
   if (token && expiry && Date.now() / 1000 < expiry - 60) return token;
-  // Refresh
   const data = await stravaPost({
-    client_id: ls.get('client_id'),
-    client_secret: ls.get('client_secret'),
-    grant_type: 'refresh_token',
-    refresh_token: ls.get('refresh_token'),
+    client_id: ls.get('client_id'), client_secret: ls.get('client_secret'),
+    grant_type: 'refresh_token', refresh_token: ls.get('refresh_token'),
   });
   storeTokens(data);
   return data.access_token;
@@ -262,7 +324,6 @@ async function fetchActivities(forceRefresh = false) {
   const token = await getAccessToken();
   const rides = [];
   let page = 1;
-
   while (true) {
     const r = await fetch(`${STRAVA_API}/athlete/activities?per_page=200&page=${page}`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -270,13 +331,12 @@ async function fetchActivities(forceRefresh = false) {
     if (!r.ok) throw new Error(`Strava API error ${r.status}`);
     const batch = await r.json();
     if (!batch.length) break;
-
     for (const a of batch) {
       if (RIDE_TYPES.has(a.type) || RIDE_TYPES.has(a.sport_type)) {
         rides.push({
           date:      a.start_date_local || a.start_date,
-          distance:  a.distance / 1000,               // → km
-          elevation: a.total_elevation_gain,           // m
+          distance:  a.distance / 1000,
+          elevation: a.total_elevation_gain,
           name:      a.name,
         });
       }
@@ -284,7 +344,6 @@ async function fetchActivities(forceRefresh = false) {
     if (batch.length < 200) break;
     page++;
   }
-
   ls.set('activities', rides);
   ls.set('cached_at', Date.now());
   return rides;
@@ -294,7 +353,7 @@ async function fetchActivities(forceRefresh = false) {
 function isoWeekKey(dateStr) {
   const d = new Date(dateStr);
   const day = d.getDay() || 7;
-  d.setDate(d.getDate() + 4 - day);           // shift to Thursday of the week
+  d.setDate(d.getDate() + 4 - day);
   const year = d.getFullYear();
   const week = Math.ceil(((d - new Date(year, 0, 1)) / 864e5 + 1) / 7);
   return `${year}-W${String(week).padStart(2, '0')}`;
@@ -302,10 +361,9 @@ function isoWeekKey(dateStr) {
 
 function weekLabel(key) {
   const [year, w] = key.split('-W');
-  const weekNum = parseInt(w, 10);
   const jan4 = new Date(parseInt(year, 10), 0, 4);
   const monday = new Date(jan4);
-  monday.setDate(jan4.getDate() - (jan4.getDay() || 7) + 1 + (weekNum - 1) * 7);
+  monday.setDate(jan4.getDate() - (jan4.getDay() || 7) + 1 + (parseInt(w, 10) - 1) * 7);
   return monday.toLocaleDateString('en', { month: 'short', day: 'numeric' });
 }
 
@@ -325,11 +383,27 @@ function calcWeeklyMetrics(rides) {
   return weeks;
 }
 
+function calcPlanByWeek() {
+  const weeks = {};
+  for (const r of TRAINING_PLAN) {
+    const k = isoWeekKey(r.date);
+    if (!weeks[k]) weeks[k] = { distance: 0, elevation: 0, longest: 0, rides: 0, items: [] };
+    weeks[k].distance  += r.km;
+    weeks[k].elevation += r.hm;
+    weeks[k].longest    = Math.max(weeks[k].longest, r.km);
+    weeks[k].rides     += 1;
+    weeks[k].items.push(r);
+  }
+  return weeks;
+}
+
 // ── Charts ───────────────────────────────────────────────────────────────────
 const chartCache = {};
 
-function renderChart(id, labels, values, goal) {
+// Generic bar chart with a (possibly per-week) goal line
+function renderChart(id, labels, values, goals) {
   if (chartCache[id]) chartCache[id].destroy();
+  const goalData = Array.isArray(goals) ? goals : labels.map(() => goals);
   const ctx = document.getElementById(id).getContext('2d');
   chartCache[id] = new Chart(ctx, {
     type: 'bar',
@@ -338,17 +412,18 @@ function renderChart(id, labels, values, goal) {
       datasets: [
         {
           data: values,
-          backgroundColor: values.map(v => v >= goal ? 'rgba(34,197,94,0.75)' : 'rgba(252,76,2,0.7)'),
+          backgroundColor: values.map((v, i) => v >= goalData[i] ? 'rgba(34,197,94,0.75)' : 'rgba(252,76,2,0.7)'),
           borderRadius: 4,
           order: 2,
         },
         {
           type: 'line',
-          data: labels.map(() => goal),
+          data: goalData,
           borderColor: '#94a3b8',
           borderDash: [5, 4],
           borderWidth: 1.5,
-          pointRadius: 0,
+          pointRadius: 2,
+          pointBackgroundColor: '#94a3b8',
           fill: false,
           order: 1,
         },
@@ -367,9 +442,53 @@ function renderChart(id, labels, values, goal) {
   });
 }
 
+// Grouped plan vs actual chart
+function renderPlanVsActual(id, labels, planValues, actualValues) {
+  if (chartCache[id]) chartCache[id].destroy();
+  const ctx = document.getElementById(id).getContext('2d');
+  const today = new Date();
+  chartCache[id] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Planned',
+          data: planValues,
+          backgroundColor: 'rgba(148,163,184,0.35)',
+          borderColor: 'rgba(148,163,184,0.7)',
+          borderWidth: 1.5,
+          borderRadius: 4,
+        },
+        {
+          label: 'Actual',
+          data: actualValues,
+          backgroundColor: actualValues.map((v, i) => {
+            if (v === 0) return 'rgba(200,200,200,0.3)'; // future / not ridden
+            return v >= planValues[i] ? 'rgba(34,197,94,0.75)' : 'rgba(252,76,2,0.7)';
+          }),
+          borderRadius: 4,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: true, position: 'top', labels: { font: { size: 10 }, boxWidth: 12 } },
+        tooltip: { callbacks: {
+          label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()}`
+        }},
+      },
+      scales: {
+        y: { beginAtZero: true, grid: { color: '#f4f4f4' }, ticks: { font: { size: 10 } } },
+        x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+      },
+    },
+  });
+}
+
 // ── This-week card ───────────────────────────────────────────────────────────
 function pct(v, g) { return g > 0 ? Math.round(v / g * 100) : 0; }
-
 function progressColor(p) {
   if (p >= 100) return '#22c55e';
   if (p >= 65)  return '#f59e0b';
@@ -393,7 +512,7 @@ function renderThisWeek(weekData, goals) {
         <div class="metric-value" style="color:${color}">
           ${m.value}<span class="metric-unit">${m.unit ? ' ' + m.unit : ''}</span>
         </div>
-        <div class="metric-sub">${p}% · goal ${m.goal}${m.unit ? ' ' + m.unit : ''}</div>
+        <div class="metric-sub">${p}% · planned ${m.goal}${m.unit ? '\u202f' + m.unit : ''}</div>
         <div class="progress-bar">
           <div class="progress-fill" style="width:${Math.min(p, 100)}%;background:${color}"></div>
         </div>
@@ -401,18 +520,74 @@ function renderThisWeek(weekData, goals) {
   }).join('');
 }
 
+// ── Plan rides for this week ─────────────────────────────────────────────────
+function renderPlanRides(planWeek) {
+  const el = document.getElementById('plan-this-week');
+  if (!planWeek) { el.classList.add('hidden'); return; }
+  el.classList.remove('hidden');
+
+  document.getElementById('plan-rides-list').innerHTML = planWeek.items.map(r => {
+    const s = TYPE_STYLE[r.type] || { bg: '#f0f0f0', fg: '#555' };
+    const d = new Date(r.date);
+    const day = d.toLocaleDateString('en', { weekday: 'short' });
+    const dateStr = d.toLocaleDateString('en', { month: 'short', day: 'numeric' });
+    const elev = r.hm > 0 ? ` · ${r.hm}\u202fm` : '';
+    return `
+      <li class="plan-ride">
+        <div class="plan-ride-left">
+          <span class="badge" style="background:${s.bg};color:${s.fg}">${r.type}</span>
+          <span class="plan-ride-date">${day} ${dateStr}</span>
+        </div>
+        <div class="plan-ride-stats">${r.km}\u202fkm${elev}</div>
+      </li>`;
+  }).join('');
+}
+
 // ── Full render ──────────────────────────────────────────────────────────────
-function renderDashboard(weeks, goals) {
+function renderDashboard(actualWeeks, goals, planWeeks) {
   const thisWeek = currentWeekKey();
-  renderThisWeek(weeks[thisWeek], goals);
 
-  const keys   = Object.keys(weeks).sort().slice(-WEEKS_SHOWN);
-  const labels = keys.map(weekLabel);
+  // Week badge: "Week 3 of 10" if inside training block
+  const planKeys = Object.keys(planWeeks).sort();
+  const planIdx  = planKeys.indexOf(thisWeek);
+  const badge    = document.getElementById('week-badge');
+  if (planIdx >= 0) {
+    badge.textContent = `· Training week ${planIdx + 1} of ${planKeys.length}`;
+  } else {
+    badge.textContent = '';
+  }
 
-  renderChart('chart-distance',  labels, keys.map(k => +weeks[k].distance.toFixed(1)),  goals.distance);
-  renderChart('chart-elevation', labels, keys.map(k => Math.round(weeks[k].elevation)), goals.elevation);
-  renderChart('chart-longest',   labels, keys.map(k => +weeks[k].longest.toFixed(1)),   goals.longest);
-  renderChart('chart-rides',     labels, keys.map(k => weeks[k].rides),                 goals.rides);
+  // This week: use plan totals as goals, fall back to fixed goals
+  const thisPlan    = planWeeks[thisWeek];
+  const weekGoals   = thisPlan
+    ? { distance: thisPlan.distance, elevation: thisPlan.elevation, longest: thisPlan.longest, rides: thisPlan.rides }
+    : goals;
+
+  const titleEl = document.getElementById('this-week-title');
+  titleEl.textContent = thisPlan ? 'This Week vs Plan' : 'This Week vs Goals';
+
+  renderThisWeek(actualWeeks[thisWeek], weekGoals);
+  renderPlanRides(thisPlan);
+
+  // Plan vs Actual charts (training block)
+  const labels         = planKeys.map(weekLabel);
+  const planDistances  = planKeys.map(k => planWeeks[k].distance);
+  const planElevations = planKeys.map(k => planWeeks[k].elevation);
+  const actDistances   = planKeys.map(k => actualWeeks[k] ? +actualWeeks[k].distance.toFixed(1) : 0);
+  const actElevations  = planKeys.map(k => actualWeeks[k] ? Math.round(actualWeeks[k].elevation) : 0);
+  renderPlanVsActual('chart-plan-distance', labels, planDistances, actDistances);
+  renderPlanVsActual('chart-plan-elevation', labels, planElevations, actElevations);
+
+  // Historical charts: goal line follows the plan where available
+  const histKeys   = Object.keys(actualWeeks).sort().slice(-WEEKS_SHOWN);
+  const histLabels = histKeys.map(weekLabel);
+  const planGoal   = (metric, fallback) =>
+    histKeys.map(k => planWeeks[k] ? planWeeks[k][metric] : fallback);
+
+  renderChart('chart-distance',  histLabels, histKeys.map(k => +actualWeeks[k].distance.toFixed(1)),  planGoal('distance', goals.distance));
+  renderChart('chart-elevation', histLabels, histKeys.map(k => Math.round(actualWeeks[k].elevation)), planGoal('elevation', goals.elevation));
+  renderChart('chart-longest',   histLabels, histKeys.map(k => +actualWeeks[k].longest.toFixed(1)),   planGoal('longest', goals.longest));
+  renderChart('chart-rides',     histLabels, histKeys.map(k => actualWeeks[k].rides),                 planGoal('rides', goals.rides));
 }
 
 // ── Load + render pipeline ───────────────────────────────────────────────────
@@ -422,14 +597,15 @@ async function loadAndRender(forceRefresh = false) {
   errEl.classList.add('hidden');
   loader.classList.remove('hidden');
   try {
-    const rides = await fetchActivities(forceRefresh);
-    const weeks = calcWeeklyMetrics(rides);
-    renderDashboard(weeks, getGoals());
+    const rides      = await fetchActivities(forceRefresh);
+    const actualWeeks = calcWeeklyMetrics(rides);
+    const planWeeks  = calcPlanByWeek();
+    renderDashboard(actualWeeks, getGoals(), planWeeks);
 
     const cachedAt = ls.get('cached_at');
     const syncEl = document.getElementById('sync-info');
     if (cachedAt) {
-      syncEl.textContent = `Last synced: ${new Date(cachedAt).toLocaleString()} · ${rides.length} rides loaded`;
+      syncEl.textContent = `Last synced: ${new Date(cachedAt).toLocaleString()} · ${rides.length} rides`;
       syncEl.classList.remove('hidden');
     }
   } catch (e) {
@@ -449,26 +625,16 @@ function show(id) {
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 async function init() {
-  const params = new URLSearchParams(window.location.search);
-  const code   = params.get('code');
+  const params     = new URLSearchParams(window.location.search);
+  const code       = params.get('code');
   const oauthError = params.get('error');
 
-  if (oauthError) {
-    show('setup-screen');
-    setupError('Strava denied access: ' + oauthError);
-    return;
-  }
+  if (oauthError) { show('setup-screen'); setupError('Strava denied access: ' + oauthError); return; }
 
   if (code) {
-    // Clear code from URL immediately
     window.history.replaceState({}, '', window.location.pathname);
-    try {
-      await exchangeCode(code);
-    } catch (e) {
-      show('setup-screen');
-      setupError('Token exchange failed: ' + e.message);
-      return;
-    }
+    try { await exchangeCode(code); }
+    catch (e) { show('setup-screen'); setupError('Token exchange failed: ' + e.message); return; }
   }
 
   if (ls.get('refresh_token')) {
@@ -497,24 +663,22 @@ document.getElementById('connect-btn').addEventListener('click', () => {
   const clientSecret = document.getElementById('client-secret').value.trim();
   if (!clientId || !clientSecret) { setupError('Please enter Client ID and Client Secret.'); return; }
 
-  const goals = {
+  ls.set('client_id',     clientId);
+  ls.set('client_secret', clientSecret);
+  saveGoals({
     distance:  parseFloat(document.getElementById('g-distance').value)  || 200,
     elevation: parseFloat(document.getElementById('g-elevation').value) || 3000,
     longest:   parseFloat(document.getElementById('g-longest').value)   || 100,
     rides:     parseFloat(document.getElementById('g-rides').value)     || 4,
-  };
-  ls.set('client_id',     clientId);
-  ls.set('client_secret', clientSecret);
-  saveGoals(goals);
+  });
 
-  const url = `${STRAVA_AUTH}?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri())}&response_type=code&scope=activity:read_all`;
-  window.location.href = url;
+  window.location.href = `${STRAVA_AUTH}?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri())}&response_type=code&scope=activity:read_all`;
 });
 
 document.getElementById('refresh-btn').addEventListener('click', () => loadAndRender(true));
 
 document.getElementById('goals-btn').addEventListener('click', () => {
-  const panel = document.getElementById('goals-panel');
+  const panel   = document.getElementById('goals-panel');
   const opening = panel.classList.contains('hidden');
   panel.classList.toggle('hidden');
   if (opening) {
@@ -534,8 +698,8 @@ document.getElementById('save-goals-btn').addEventListener('click', () => {
     rides:     parseFloat(document.getElementById('sg-rides').value),
   });
   document.getElementById('goals-panel').classList.add('hidden');
-  const weeks = calcWeeklyMetrics(ls.get('activities') || []);
-  renderDashboard(weeks, getGoals());
+  const actualWeeks = calcWeeklyMetrics(ls.get('activities') || []);
+  renderDashboard(actualWeeks, getGoals(), calcPlanByWeek());
 });
 
 document.getElementById('disconnect-btn').addEventListener('click', () => {
