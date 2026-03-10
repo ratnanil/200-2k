@@ -207,6 +207,35 @@
 
 <script>
 // ═══════════════════════════════════════════════════════════════════════════
+// DEV MODE — set to true to skip Strava OAuth and use mock data locally
+// ═══════════════════════════════════════════════════════════════════════════
+const DEV_MODE = false;
+
+// Mock rides used when DEV_MODE = true.
+// Format matches Strava: date (YYYY-MM-DD), distance (km), elevation (m).
+const MOCK_ACTIVITIES = [
+  // KW 7 — light pre-block week
+  { date: "2026-02-10", distance: 32,  elevation: 180 },
+  { date: "2026-02-12", distance: 28,  elevation: 90  },
+  { date: "2026-02-14", distance: 55,  elevation: 420 },
+  // KW 8
+  { date: "2026-02-17", distance: 41,  elevation: 250 },
+  { date: "2026-02-20", distance: 68,  elevation: 580 },
+  // KW 9
+  { date: "2026-02-24", distance: 38,  elevation: 300 },
+  { date: "2026-02-26", distance: 44,  elevation: 620 },
+  { date: "2026-03-01", distance: 82,  elevation: 810 },
+  // KW 10
+  { date: "2026-03-03", distance: 29,  elevation: 120 },
+  { date: "2026-03-05", distance: 35,  elevation: 200 },
+  { date: "2026-03-08", distance: 60,  elevation: 550 },
+  // KW 11 — training block starts, partial week (plan: 56+40+70 = 166km)
+  { date: "2026-03-10", distance: 54,  elevation: 0   },
+  { date: "2026-03-12", distance: 38,  elevation: 460 },
+  // long ride not done yet
+];
+
+// ═══════════════════════════════════════════════════════════════════════════
 // TRAINING PLAN
 // Update this whenever your plan changes. Dates as YYYY-MM-DD.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -317,6 +346,8 @@ function storeTokens(data) {
 
 // ── Strava activities ────────────────────────────────────────────────────────
 async function fetchActivities(forceRefresh = false) {
+  if (DEV_MODE) return MOCK_ACTIVITIES;
+
   const cachedAt = ls.get('cached_at');
   const cached   = ls.get('activities');
   if (!forceRefresh && cached && cachedAt && Date.now() - cachedAt < CACHE_TTL_MS) return cached;
@@ -637,7 +668,7 @@ async function init() {
     catch (e) { show('setup-screen'); setupError('Token exchange failed: ' + e.message); return; }
   }
 
-  if (ls.get('refresh_token')) {
+  if (DEV_MODE || ls.get('refresh_token')) {
     show('dashboard-screen');
     loadAndRender();
   } else {
