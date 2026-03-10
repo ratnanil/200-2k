@@ -80,10 +80,10 @@ const DEV_MODE = true; // set back to false before pushing
 Edit `plan.csv` directly — in a text editor, LibreOffice Calc, or any spreadsheet tool:
 
 ```
-date,type,km,hm
-2026-03-10,Commute,56,0
-2026-03-12,Hills,40,500
-2026-03-15,Long ride,70,700
+date,type,km,hm,url
+2026-03-10,Commute,56,0,
+2026-03-12,Hills,40,500,https://www.komoot.com/tour/...
+2026-03-15,Long ride,70,700,
 ```
 
 | Field  | Type   | Description |
@@ -92,6 +92,7 @@ date,type,km,hm
 | `type` | string | `"Commute"`, `"Hills"`, `"Long ride"` (controls badge colour) |
 | `km`   | number | Planned distance in kilometres |
 | `hm`   | number | Planned elevation gain in metres |
+| `url`  | string | Optional link to a route (e.g. Komoot) — appears as a tappable link in the calendar event |
 
 Weeks are derived automatically from the date using ISO week numbers (Monday–Sunday). To add a new training block, replace or extend the file and push — no other changes needed.
 
