@@ -193,18 +193,16 @@
       </div>
     </div>
 
-    <!-- Longest ride -->
+    <!-- Longest ride + Goal readiness -->
     <div class="charts-grid">
       <div class="card">
         <div class="card-title">Longest Ride (km) — Plan vs Actual, weekly + rolling 4w</div>
         <canvas id="chart-longest"></canvas>
       </div>
-    </div>
-
-    <!-- Goal readiness -->
-    <div class="card mb">
-      <div class="card-title" id="goal-readiness-title">Distance Goal Readiness — longest ride (rolling 4w) / 200 km</div>
-      <canvas id="chart-goal-readiness"></canvas>
+      <div class="card">
+        <div class="card-title" id="goal-readiness-title">Distance Goal Readiness — longest ride (rolling 4w) / 200 km</div>
+        <canvas id="chart-goal-readiness"></canvas>
+      </div>
     </div>
 
     <div id="sync-info" class="sync-info hidden"></div>
@@ -764,6 +762,12 @@ function renderDashboard(actualWeeks, goals, planWeeks) {
       return window.reduce((s, wk) => s + getVal(wk), 0);
     });
   }
+  function rollingMax4w(keys, getVal) {
+    return keys.map((k, i) => {
+      const window = keys.slice(Math.max(0, i - 3), i + 1);
+      return Math.max(...window.map(wk => getVal(wk)));
+    });
+  }
   // Plan rolling: computed from plan weeks only (window grows from 1→4 in first 4 weeks)
   const planRoll4Dist = rolling4w(planKeys, k => planWeeks[k].distance);
   const planRoll4Elev = rolling4w(planKeys, k => planWeeks[k].elevation);
@@ -784,7 +788,7 @@ function renderDashboard(actualWeeks, goals, planWeeks) {
   // Longest ride: weekly bars + rolling 4w lines
   const planWeeklyLongest = planKeys.map(k => planWeeks[k].longest);
   const actWeeklyLongest  = planKeys.map(k => actualWeeks[k] ? +actualWeeks[k].longest.toFixed(1) : 0);
-  const planRoll4Longest  = rolling4w(planKeys, k => planWeeks[k].longest);
+  const planRoll4Longest  = rollingMax4w(planKeys, k => planWeeks[k].longest);
   const actRoll4Longest   = planKeys.map(k => {
     const idx    = allActualKeys.indexOf(k);
     const window = allActualKeys.slice(Math.max(0, idx - 3), idx + 1);
