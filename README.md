@@ -11,32 +11,6 @@ A single-file web app that pulls cycling activities from Strava and visualises w
 - Renders a Plan vs Actual chart covering the full training block
 - Renders historical charts for the last 16 weeks with the plan target as a dynamic goal line
 - Falls back to fixed user-defined goals for weeks outside the training block
-
-### Metrics tracked
-
-**This Week vs Plan** (big numbers with progress bars)
-- Weekly distance (km)
-- Weekly elevation gain (m)
-- Longest ride (km)
-- Rides per week
-
-**Extended Metrics** (derived, calculated from actual Strava data)
-
-| Group | Metric | Definition |
-|---|---|---|
-| Volume & Load | Rolling 4w distance | Sum of distance over the last 4 weeks |
-| | Rolling 4w elevation | Sum of elevation over the last 4 weeks |
-| | Equivalent distance | `distance + elevation / 100` — single load indicator |
-| Long Ride | Rolling 4w longest ride | Max single-ride distance in the last 4 weeks |
-| | Long ride share | `longest ride / weekly distance × 100` |
-| Terrain | Climbing density | `weekly elevation / weekly distance` (m/km) |
-| | Rolling 4w climbing density | Climbing density over the last 4 weeks |
-| Goal Proximity | Distance readiness | `rolling longest / event distance` |
-| | Elevation readiness | `rolling best ride elevation / event elevation` |
-| | Terrain similarity | `rolling climb density / goal climb density` |
-| Consistency | Distance change | `this week / last week` — flags sudden load increases (>130% shown in red) |
-
-Rolling windows adapt when fewer than 4 weeks of data are available (shown as "2w", "3w", etc.).
 - Caches activity data in `localStorage` for 30 minutes; manual sync available
 
 ## Files
@@ -48,17 +22,6 @@ README.md    — this file
 
 All runtime dependencies are loaded from CDN:
 - [Chart.js 4.4.0](https://www.chartjs.org/) — charts
-
-## Configuration
-
-Two types of configurable values (set on first run, editable via the Settings button):
-
-**Event goal** — the target event you're training for (used for goal proximity metrics)
-- Event distance (km) — default: max single-ride km in the training plan (200 km)
-- Event elevation (m) — default: max single-ride hm in the training plan (2000 m)
-
-**Fallback weekly goals** — used for weeks outside the training block
-- Weekly distance, elevation, longest ride, rides per week
 
 ## Setup
 
