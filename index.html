@@ -181,6 +181,18 @@
       </div>
     </div>
 
+    <!-- Rolling 4-week load -->
+    <div class="charts-grid">
+      <div class="card">
+        <div class="card-title">Rolling 4-week Distance (km)</div>
+        <canvas id="chart-roll4-distance"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-title">Rolling 4-week Elevation (m)</div>
+        <canvas id="chart-roll4-elevation"></canvas>
+      </div>
+    </div>
+
     <!-- Historical charts -->
     <div class="charts-grid">
       <div class="card">
@@ -209,7 +221,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // DEV MODE — set to true to skip Strava OAuth and use mock data locally
 // ═══════════════════════════════════════════════════════════════════════════
-const DEV_MODE = false;
+const DEV_MODE = true;
 
 // Mock rides used when DEV_MODE = true.
 // Format matches Strava: date (YYYY-MM-DD), distance (km), elevation (m).
@@ -608,6 +620,31 @@ function renderDashboard(actualWeeks, goals, planWeeks) {
   const actElevations  = planKeys.map(k => actualWeeks[k] ? Math.round(actualWeeks[k].elevation) : 0);
   renderPlanVsActual('chart-plan-distance', labels, planDistances, actDistances);
   renderPlanVsActual('chart-plan-elevation', labels, planElevations, actElevations);
+
+  // Rolling 4-week charts (training block weeks, using all actual history for the window)
+  const allActualKeys = Object.keys(actualWeeks).sort();
+  function rolling4w(keys, getVal) {
+    return keys.map((k, i) => {
+      const window = keys.slice(Math.max(0, i - 3), i + 1);
+      return window.reduce((s, wk) => s + getVal(wk), 0);
+    });
+  }
+  // Plan rolling: computed from plan weeks only (window grows from 1→4 in first 4 weeks)
+  const planRoll4Dist = rolling4w(planKeys, k => planWeeks[k].distance);
+  const planRoll4Elev = rolling4w(planKeys, k => planWeeks[k].elevation);
+  // Actual rolling: use full actual history so early plan weeks have real context
+  const actRoll4Dist = planKeys.map(k => {
+    const idx    = allActualKeys.indexOf(k);
+    const window = allActualKeys.slice(Math.max(0, idx - 3), idx + 1);
+    return +window.reduce((s, wk) => s + (actualWeeks[wk]?.distance ?? 0), 0).toFixed(1);
+  });
+  const actRoll4Elev = planKeys.map(k => {
+    const idx    = allActualKeys.indexOf(k);
+    const window = allActualKeys.slice(Math.max(0, idx - 3), idx + 1);
+    return Math.round(window.reduce((s, wk) => s + (actualWeeks[wk]?.elevation ?? 0), 0));
+  });
+  renderPlanVsActual('chart-roll4-distance', labels, planRoll4Dist, actRoll4Dist);
+  renderPlanVsActual('chart-roll4-elevation', labels, planRoll4Elev, actRoll4Elev);
 
   // Historical charts: goal line follows the plan where available
   const histKeys   = Object.keys(actualWeeks).sort().slice(-WEEKS_SHOWN);
