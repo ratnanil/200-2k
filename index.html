@@ -403,11 +403,7 @@ function isoWeekKey(dateStr) {
 }
 
 function weekLabel(key) {
-  const [year, w] = key.split('-W');
-  const jan4 = new Date(parseInt(year, 10), 0, 4);
-  const monday = new Date(jan4);
-  monday.setDate(jan4.getDate() - (jan4.getDay() || 7) + 1 + (parseInt(w, 10) - 1) * 7);
-  return monday.toLocaleDateString('en', { month: 'short', day: 'numeric' });
+  return 'W' + key.split('-W')[1];
 }
 
 function currentWeekKey() { return isoWeekKey(new Date().toISOString()); }
