@@ -201,6 +201,12 @@
       </div>
     </div>
 
+    <!-- Goal readiness -->
+    <div class="card mb">
+      <div class="card-title" id="goal-readiness-title">Distance Goal Readiness — longest ride (rolling 4w) / 200 km</div>
+      <canvas id="chart-goal-readiness"></canvas>
+    </div>
+
     <div id="sync-info" class="sync-info hidden"></div>
   </div>
 </div>
@@ -579,6 +585,86 @@ function renderLongestRideChart(id, labels, planWeekly, actWeekly, planRoll4, ac
   });
 }
 
+function renderGoalReadinessChart(id, labels, planRatios, actRatios, goalDist) {
+  if (chartCache[id]) chartCache[id].destroy();
+  document.getElementById('goal-readiness-title').textContent =
+    `Distance Goal Readiness — longest ride (rolling 4w) / ${goalDist} km`;
+  const ctx = document.getElementById(id).getContext('2d');
+  const threshold = v => labels.map(() => v);
+  chartCache[id] = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Planned',
+          data: planRatios,
+          borderColor: 'rgba(148,163,184,0.9)',
+          borderDash: [5, 4],
+          borderWidth: 2,
+          pointRadius: 3,
+          pointBackgroundColor: 'rgba(148,163,184,0.9)',
+          fill: false,
+        },
+        {
+          label: 'Actual',
+          data: actRatios,
+          borderColor: 'rgba(99,102,241,0.9)',
+          borderWidth: 2,
+          pointRadius: 3,
+          pointBackgroundColor: 'rgba(99,102,241,0.9)',
+          fill: false,
+        },
+        {
+          label: '≥0.8 Ready',
+          data: threshold(0.8),
+          borderColor: 'rgba(34,197,94,0.7)',
+          borderDash: [3, 3],
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: false,
+        },
+        {
+          label: '~0.7 Approaching',
+          data: threshold(0.7),
+          borderColor: 'rgba(245,158,11,0.7)',
+          borderDash: [3, 3],
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: false,
+        },
+        {
+          label: '~0.5 Base built',
+          data: threshold(0.5),
+          borderColor: 'rgba(239,68,68,0.6)',
+          borderDash: [3, 3],
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: false,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: true, position: 'top', labels: { font: { size: 10 }, boxWidth: 12 } },
+        tooltip: { callbacks: {
+          label: c => ` ${c.dataset.label}: ${(c.parsed.y * 100).toFixed(0)}%`
+        }},
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 1.1,
+          grid: { color: '#f4f4f4' },
+          ticks: { font: { size: 10 }, callback: v => `${Math.round(v * 100)}%` },
+        },
+        x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+      },
+    },
+  });
+}
+
 // ── This-week card ───────────────────────────────────────────────────────────
 function pct(v, g) { return g > 0 ? Math.round(v / g * 100) : 0; }
 function progressColor(p) {
@@ -705,6 +791,12 @@ function renderDashboard(actualWeeks, goals, planWeeks) {
     return +Math.max(...window.map(wk => actualWeeks[wk]?.longest ?? 0)).toFixed(1);
   });
   renderLongestRideChart('chart-longest', labels, planWeeklyLongest, actWeeklyLongest, planRoll4Longest, actRoll4Longest);
+
+  // Goal readiness: rolling 4w longest / event goal distance
+  const goalDist = Math.max(...TRAINING_PLAN.map(r => r.km));
+  const planGoalRatios = planRoll4Longest.map(v => +(v / goalDist).toFixed(3));
+  const actGoalRatios  = actRoll4Longest.map(v => v === 0 ? null : +(v / goalDist).toFixed(3));
+  renderGoalReadinessChart('chart-goal-readiness', labels, planGoalRatios, actGoalRatios, goalDist);
 
 }
 
