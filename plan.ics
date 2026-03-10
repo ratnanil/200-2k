@@ -15,6 +15,7 @@ DTEND;VALUE=DATE:20260313
 SUMMARY:Hills – 40 km / 500 m
 DESCRIPTION:40 km / 500 m elevation
 UID:2026-03-12-hills@training-plan
+URL:https://www.komoot.com/tour/2821657596
 END:VEVENT
 BEGIN:VEVENT
 DTSTART;VALUE=DATE:20260315
@@ -22,6 +23,7 @@ DTEND;VALUE=DATE:20260316
 SUMMARY:Long ride – 70 km / 700 m
 DESCRIPTION:70 km / 700 m elevation
 UID:2026-03-15-long-ride@training-plan
+URL:https://www.komoot.com/tour/2821663190
 END:VEVENT
 BEGIN:VEVENT
 DTSTART;VALUE=DATE:20260317
