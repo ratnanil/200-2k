@@ -18,16 +18,20 @@ with open('plan.csv', newline='') as f:
         typ = row['type'].strip()
         km  = row['km'].strip()
         hm  = row['hm'].strip()
+        url = row.get('url', '').strip()
         uid = f"{d}-{typ.lower().replace(' ', '-')}@training-plan"
-        lines += [
+        event = [
             'BEGIN:VEVENT',
             f'DTSTART;VALUE=DATE:{d.replace("-", "")}',
             f'DTEND;VALUE=DATE:{next_day(d)}',
             f'SUMMARY:{typ} \u2013 {km} km / {hm} m',
             f'DESCRIPTION:{km} km / {hm} m elevation',
             f'UID:{uid}',
-            'END:VEVENT',
         ]
+        if url:
+            event.append(f'URL:{url}')
+        event.append('END:VEVENT')
+        lines += event
 
 lines.append('END:VCALENDAR')
 
