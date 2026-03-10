@@ -196,28 +196,8 @@
     <!-- Longest ride -->
     <div class="charts-grid">
       <div class="card">
-        <div class="card-title">Longest Ride (km) — weekly + rolling 4w</div>
+        <div class="card-title">Longest Ride (km) — Plan vs Actual, weekly + rolling 4w</div>
         <canvas id="chart-longest"></canvas>
-      </div>
-    </div>
-
-    <!-- Historical charts -->
-    <div class="charts-grid">
-      <div class="card">
-        <div class="card-title">Weekly Distance — history (km)</div>
-        <canvas id="chart-distance"></canvas>
-      </div>
-      <div class="card">
-        <div class="card-title">Weekly Elevation — history (m)</div>
-        <canvas id="chart-elevation"></canvas>
-      </div>
-      <div class="card">
-        <div class="card-title">Longest Ride — history (km)</div>
-        <canvas id="chart-longest"></canvas>
-      </div>
-      <div class="card">
-        <div class="card-title">Rides per Week — history</div>
-        <canvas id="chart-rides"></canvas>
       </div>
     </div>
 
@@ -726,16 +706,6 @@ function renderDashboard(actualWeeks, goals, planWeeks) {
   });
   renderLongestRideChart('chart-longest', labels, planWeeklyLongest, actWeeklyLongest, planRoll4Longest, actRoll4Longest);
 
-  // Historical charts: goal line follows the plan where available
-  const histKeys   = Object.keys(actualWeeks).sort().slice(-WEEKS_SHOWN);
-  const histLabels = histKeys.map(weekLabel);
-  const planGoal   = (metric, fallback) =>
-    histKeys.map(k => planWeeks[k] ? planWeeks[k][metric] : fallback);
-
-  renderChart('chart-distance',  histLabels, histKeys.map(k => +actualWeeks[k].distance.toFixed(1)),  planGoal('distance', goals.distance));
-  renderChart('chart-elevation', histLabels, histKeys.map(k => Math.round(actualWeeks[k].elevation)), planGoal('elevation', goals.elevation));
-  renderChart('chart-longest',   histLabels, histKeys.map(k => +actualWeeks[k].longest.toFixed(1)),   planGoal('longest', goals.longest));
-  renderChart('chart-rides',     histLabels, histKeys.map(k => actualWeeks[k].rides),                 planGoal('rides', goals.rides));
 }
 
 // ── Load + render pipeline ───────────────────────────────────────────────────
