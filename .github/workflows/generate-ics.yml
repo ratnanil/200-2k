@@ -1,0 +1,26 @@
+name: Generate plan.ics
+
+on:
+  push:
+    branches: [main]
+    paths: [plan.csv]
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate plan.ics
+        run: python3 generate-ics.py
+
+      - name: Commit plan.ics
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add plan.ics
+          git diff --cached --quiet || git commit -m "Regenerate plan.ics from plan.csv"
+          git push

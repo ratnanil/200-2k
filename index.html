@@ -240,51 +240,21 @@ const MOCK_ACTIVITIES = [
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════
-// TRAINING PLAN
-// Update this whenever your plan changes. Dates as YYYY-MM-DD.
+// TRAINING PLAN — loaded from plan.csv at runtime
 // ═══════════════════════════════════════════════════════════════════════════
-const TRAINING_PLAN = [
-  // Week 1 (KW 11)
-  { date: "2026-03-10", type: "Commute",   km: 56,  hm: 0    },
-  { date: "2026-03-12", type: "Hills",     km: 40,  hm: 500  },
-  { date: "2026-03-15", type: "Long ride", km: 70,  hm: 700  },
-  // Week 2 (KW 12)
-  { date: "2026-03-17", type: "Commute",   km: 68,  hm: 0    },
-  { date: "2026-03-19", type: "Hills",     km: 45,  hm: 600  },
-  { date: "2026-03-22", type: "Long ride", km: 80,  hm: 800  },
-  // Week 3 (KW 13)
-  { date: "2026-03-24", type: "Commute",   km: 73,  hm: 0    },
-  { date: "2026-03-26", type: "Hills",     km: 50,  hm: 700  },
-  { date: "2026-03-29", type: "Long ride", km: 95,  hm: 900  },
-  // Week 4 (KW 14) — recovery
-  { date: "2026-03-31", type: "Commute",   km: 56,  hm: 0    },
-  { date: "2026-04-02", type: "Hills",     km: 35,  hm: 0    },
-  { date: "2026-04-05", type: "Long ride", km: 70,  hm: 0    },
-  // Week 5 (KW 15)
-  { date: "2026-04-07", type: "Commute",   km: 78,  hm: 0    },
-  { date: "2026-04-09", type: "Hills",     km: 55,  hm: 900  },
-  { date: "2026-04-12", type: "Long ride", km: 110, hm: 1200 },
-  // Week 6 (KW 16)
-  { date: "2026-04-14", type: "Commute",   km: 83,  hm: 0    },
-  { date: "2026-04-16", type: "Hills",     km: 60,  hm: 1000 },
-  { date: "2026-04-19", type: "Long ride", km: 125, hm: 1400 },
-  // Week 7 (KW 17)
-  { date: "2026-04-21", type: "Commute",   km: 88,  hm: 0    },
-  { date: "2026-04-23", type: "Hills",     km: 65,  hm: 1100 },
-  { date: "2026-04-26", type: "Long ride", km: 140, hm: 1600 },
-  // Week 8 (KW 18) — recovery
-  { date: "2026-04-28", type: "Commute",   km: 56,  hm: 0    },
-  { date: "2026-04-30", type: "Hills",     km: 45,  hm: 0    },
-  { date: "2026-05-03", type: "Long ride", km: 100, hm: 0    },
-  // Week 9 (KW 19)
-  { date: "2026-05-05", type: "Commute",   km: 78,  hm: 0    },
-  { date: "2026-05-07", type: "Hills",     km: 60,  hm: 1000 },
-  { date: "2026-05-10", type: "Long ride", km: 160, hm: 1800 },
-  // Week 10 (KW 20) — peak
-  { date: "2026-05-12", type: "Commute",   km: 56,  hm: 0    },
-  { date: "2026-05-14", type: "Hills",     km: 35,  hm: 0    },
-  { date: "2026-05-17", type: "Long ride", km: 200, hm: 2000 },
-];
+let TRAINING_PLAN = [];
+
+async function loadPlan() {
+  const r = await fetch('plan.csv');
+  const text = await r.text();
+  TRAINING_PLAN = text.trim().split('\n')
+    .slice(1)
+    .filter(l => l.trim())
+    .map(l => {
+      const [date, type, km, hm] = l.split(',');
+      return { date: date.trim(), type: type.trim(), km: +km, hm: +hm };
+    });
+}
 
 const TYPE_STYLE = {
   "Commute":   { bg: "#e0f2fe", fg: "#0369a1" },
@@ -839,6 +809,7 @@ function show(id) {
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 async function init() {
+  await loadPlan();
   const params     = new URLSearchParams(window.location.search);
   const code       = params.get('code');
   const oauthError = params.get('error');
