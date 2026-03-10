@@ -193,6 +193,14 @@
       </div>
     </div>
 
+    <!-- Longest ride -->
+    <div class="charts-grid">
+      <div class="card">
+        <div class="card-title">Longest Ride (km) — weekly + rolling 4w</div>
+        <canvas id="chart-longest"></canvas>
+      </div>
+    </div>
+
     <!-- Historical charts -->
     <div class="charts-grid">
       <div class="card">
@@ -526,6 +534,71 @@ function renderPlanVsActual(id, labels, planValues, actualValues) {
   });
 }
 
+function renderLongestRideChart(id, labels, planWeekly, actWeekly, planRoll4, actRoll4) {
+  if (chartCache[id]) chartCache[id].destroy();
+  const ctx = document.getElementById(id).getContext('2d');
+  chartCache[id] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Planned (week)',
+          data: planWeekly,
+          backgroundColor: 'rgba(148,163,184,0.35)',
+          borderColor: 'rgba(148,163,184,0.7)',
+          borderWidth: 1.5,
+          borderRadius: 4,
+          order: 4,
+        },
+        {
+          label: 'Actual (week)',
+          data: actWeekly,
+          backgroundColor: actWeekly.map((v, i) =>
+            v === 0 ? 'rgba(200,200,200,0.3)' :
+            v >= planWeekly[i] ? 'rgba(34,197,94,0.75)' : 'rgba(252,76,2,0.7)'),
+          borderRadius: 4,
+          order: 3,
+        },
+        {
+          type: 'line',
+          label: 'Planned (4w)',
+          data: planRoll4,
+          borderColor: 'rgba(148,163,184,0.9)',
+          borderDash: [5, 4],
+          borderWidth: 2,
+          pointRadius: 2,
+          pointBackgroundColor: 'rgba(148,163,184,0.9)',
+          fill: false,
+          order: 2,
+        },
+        {
+          type: 'line',
+          label: 'Actual (4w)',
+          data: actRoll4,
+          borderColor: 'rgba(99,102,241,0.9)',
+          borderWidth: 2,
+          pointRadius: 2,
+          pointBackgroundColor: 'rgba(99,102,241,0.9)',
+          fill: false,
+          order: 1,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: true, position: 'top', labels: { font: { size: 10 }, boxWidth: 12 } },
+        tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${c.parsed.y}` } },
+      },
+      scales: {
+        y: { beginAtZero: true, grid: { color: '#f4f4f4' }, ticks: { font: { size: 10 } } },
+        x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+      },
+    },
+  });
+}
+
 // ── This-week card ───────────────────────────────────────────────────────────
 function pct(v, g) { return g > 0 ? Math.round(v / g * 100) : 0; }
 function progressColor(p) {
@@ -641,6 +714,17 @@ function renderDashboard(actualWeeks, goals, planWeeks) {
   });
   renderPlanVsActual('chart-roll4-distance', labels, planRoll4Dist, actRoll4Dist);
   renderPlanVsActual('chart-roll4-elevation', labels, planRoll4Elev, actRoll4Elev);
+
+  // Longest ride: weekly bars + rolling 4w lines
+  const planWeeklyLongest = planKeys.map(k => planWeeks[k].longest);
+  const actWeeklyLongest  = planKeys.map(k => actualWeeks[k] ? +actualWeeks[k].longest.toFixed(1) : 0);
+  const planRoll4Longest  = rolling4w(planKeys, k => planWeeks[k].longest);
+  const actRoll4Longest   = planKeys.map(k => {
+    const idx    = allActualKeys.indexOf(k);
+    const window = allActualKeys.slice(Math.max(0, idx - 3), idx + 1);
+    return +Math.max(...window.map(wk => actualWeeks[wk]?.longest ?? 0)).toFixed(1);
+  });
+  renderLongestRideChart('chart-longest', labels, planWeeklyLongest, actWeeklyLongest, planRoll4Longest, actRoll4Longest);
 
   // Historical charts: goal line follows the plan where available
   const histKeys   = Object.keys(actualWeeks).sort().slice(-WEEKS_SHOWN);
