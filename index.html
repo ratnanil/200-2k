@@ -403,7 +403,7 @@ function isoWeekKey(dateStr) {
 }
 
 function weekLabel(key) {
-  return 'W' + key.split('-W')[1];
+  return 'KW' + key.split('-W')[1];
 }
 
 function currentWeekKey() { return isoWeekKey(new Date().toISOString()); }
