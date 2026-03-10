@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Training Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f4f4f4; color: #1a1a1a; min-height: 100vh; }
+
+    /* ── Setup ── */
+    .setup-wrap { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 1.5rem; }
+    .setup { max-width: 480px; width: 100%; background: white; border-radius: 14px; padding: 2rem; box-shadow: 0 2px 24px rgba(0,0,0,0.08); }
+    .setup h1 { font-size: 1.4rem; margin-bottom: 0.4rem; }
+    .setup .subtitle { color: #666; font-size: 0.9rem; line-height: 1.5; margin-bottom: 1.5rem; }
+    .setup-section { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #f0f0f0; }
+    .setup-section h2 { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.8rem; }
+    .help { background: #fff8f5; border: 1px solid #fde8dd; border-radius: 8px; padding: 0.9rem 1rem; font-size: 0.85rem; line-height: 1.6; color: #555; margin-bottom: 0.5rem; }
+    .help a { color: #fc4c02; }
+    .help code { background: #f0f0f0; padding: 0.1em 0.4em; border-radius: 3px; font-size: 0.85em; }
+
+    label { display: block; font-size: 0.82rem; font-weight: 600; color: #555; margin-bottom: 0.3rem; margin-top: 0.9rem; }
+    input[type=text], input[type=number] { width: 100%; padding: 0.6rem 0.8rem; border: 1px solid #ddd; border-radius: 7px; font-size: 0.95rem; transition: border-color 0.15s; }
+    input:focus { outline: none; border-color: #fc4c02; box-shadow: 0 0 0 3px rgba(252,76,2,0.1); }
+    .goals-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 1rem; }
+
+    .btn { display: inline-block; padding: 0.75rem 1.5rem; background: #fc4c02; color: white; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; text-decoration: none; transition: background 0.15s; }
+    .btn:hover { background: #e04400; }
+    .btn-full { width: 100%; text-align: center; margin-top: 1.5rem; }
+    .btn-sm { padding: 0.4rem 0.9rem; font-size: 0.82rem; }
+    .btn-ghost { background: #eee; color: #444; }
+    .btn-ghost:hover { background: #ddd; }
+    .btn-danger { background: #fee2e2; color: #b91c1c; }
+    .btn-danger:hover { background: #fecaca; }
+
+    /* ── Dashboard ── */
+    .dash { max-width: 960px; margin: 0 auto; padding: 1.5rem; }
+    .dash-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.8rem; }
+    .dash-header h1 { font-size: 1.25rem; }
+    .dash-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+    .card { background: white; border-radius: 12px; padding: 1.4rem; box-shadow: 0 1px 8px rgba(0,0,0,0.06); }
+    .card-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #999; margin-bottom: 1rem; }
+
+    /* ── This-week metrics ── */
+    .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1.2rem; margin-bottom: 1.4rem; }
+    .metric-value { font-size: 2rem; font-weight: 800; line-height: 1; }
+    .metric-unit { font-size: 1rem; font-weight: 400; color: #aaa; }
+    .metric-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #aaa; margin-bottom: 0.35rem; }
+    .metric-sub { font-size: 0.78rem; color: #aaa; margin-top: 0.25rem; }
+    .progress-bar { height: 4px; background: #f0f0f0; border-radius: 2px; margin-top: 0.6rem; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
+
+    /* ── Charts ── */
+    .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; margin-bottom: 1.4rem; }
+    @media (max-width: 580px) { .charts-grid { grid-template-columns: 1fr; } }
+
+    /* ── Goals panel ── */
+    .goals-panel { margin-bottom: 1.4rem; }
+    .goals-panel .goals-row { margin-top: 0.5rem; }
+    .goals-panel .btn { margin-top: 1rem; }
+
+    /* ── Sync info ── */
+    .sync-info { font-size: 0.78rem; color: #bbb; text-align: right; margin-bottom: 0.6rem; }
+
+    /* ── States ── */
+    .hidden { display: none !important; }
+    .error-banner { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; border-radius: 8px; padding: 0.8rem 1rem; margin-bottom: 1rem; font-size: 0.88rem; }
+    .loading-msg { text-align: center; padding: 3rem 1rem; color: #aaa; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════ SETUP ═══════════════════════════════ -->
+<div id="setup-screen" class="hidden">
+  <div class="setup-wrap">
+    <div class="setup">
+      <h1>🚴 Training Dashboard</h1>
+      <p class="subtitle">Connects to your Strava account and shows weekly metrics vs. your goals. One-time setup, then automatic.</p>
+
+      <div class="setup-section">
+        <h2>1 · Create a Strava API app</h2>
+        <div class="help">
+          Go to <a href="https://www.strava.com/settings/api" target="_blank">strava.com/settings/api</a> and create an app.<br>
+          Set <strong>Authorization Callback Domain</strong> to <code id="callback-domain">—</code><br>
+          Then paste your credentials below.
+        </div>
+        <label for="client-id">Client ID</label>
+        <input type="text" id="client-id" placeholder="12345">
+        <label for="client-secret">Client Secret</label>
+        <input type="text" id="client-secret" placeholder="abc123def456…">
+      </div>
+
+      <div class="setup-section">
+        <h2>2 · Set your weekly goals</h2>
+        <div class="goals-row">
+          <div>
+            <label for="g-distance">Distance (km)</label>
+            <input type="number" id="g-distance" placeholder="200" min="1">
+          </div>
+          <div>
+            <label for="g-elevation">Elevation (m)</label>
+            <input type="number" id="g-elevation" placeholder="3000" min="1">
+          </div>
+          <div>
+            <label for="g-longest">Longest ride (km)</label>
+            <input type="number" id="g-longest" placeholder="100" min="1">
+          </div>
+          <div>
+            <label for="g-rides">Rides per week</label>
+            <input type="number" id="g-rides" placeholder="4" min="1">
+          </div>
+        </div>
+      </div>
+
+      <div id="setup-error" class="error-banner hidden"></div>
+      <button class="btn btn-full" id="connect-btn">Connect with Strava →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════ DASHBOARD ════════════════════════════ -->
+<div id="dashboard-screen" class="hidden">
+  <div class="dash">
+    <div class="dash-header">
+      <h1>🚴 Training Dashboard</h1>
+      <div class="dash-actions">
+        <button class="btn btn-sm btn-ghost" id="refresh-btn">↻ Sync</button>
+        <button class="btn btn-sm btn-ghost" id="goals-btn">Goals</button>
+        <button class="btn btn-sm btn-danger" id="disconnect-btn">Disconnect</button>
+      </div>
+    </div>
+
+    <div id="error-banner" class="error-banner hidden"></div>
+    <div id="loading-msg" class="loading-msg hidden">Fetching your rides from Strava…</div>
+
+    <!-- Goals editor (hidden by default) -->
+    <div id="goals-panel" class="card goals-panel hidden">
+      <div class="card-title">Weekly Goals</div>
+      <div class="goals-row">
+        <div>
+          <label for="sg-distance">Distance (km)</label>
+          <input type="number" id="sg-distance" min="1">
+        </div>
+        <div>
+          <label for="sg-elevation">Elevation (m)</label>
+          <input type="number" id="sg-elevation" min="1">
+        </div>
+        <div>
+          <label for="sg-longest">Longest ride (km)</label>
+          <input type="number" id="sg-longest" min="1">
+        </div>
+        <div>
+          <label for="sg-rides">Rides per week</label>
+          <input type="number" id="sg-rides" min="1">
+        </div>
+      </div>
+      <button class="btn btn-sm" id="save-goals-btn">Save Goals</button>
+    </div>
+
+    <!-- This week -->
+    <div class="card" style="margin-bottom:1.4rem">
+      <div class="card-title">This Week</div>
+      <div class="metrics-grid" id="this-week-metrics"></div>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts-grid">
+      <div class="card">
+        <div class="card-title">Weekly Distance (km)</div>
+        <canvas id="chart-distance"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-title">Weekly Elevation (m)</div>
+        <canvas id="chart-elevation"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-title">Longest Ride (km)</div>
+        <canvas id="chart-longest"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-title">Rides per Week</div>
+        <canvas id="chart-rides"></canvas>
+      </div>
+    </div>
+
+    <div id="sync-info" class="sync-info hidden"></div>
+  </div>
+</div>
+
+<script>
+// ── Constants ────────────────────────────────────────────────────────────────
+const STRAVA_AUTH   = 'https://www.strava.com/oauth/authorize';
+const STRAVA_TOKEN  = 'https://www.strava.com/oauth/token';
+const STRAVA_API    = 'https://www.strava.com/api/v3';
+const RIDE_TYPES    = new Set(['Ride','VirtualRide','GravelRide','MountainBikeRide','EBikeRide']);
+const WEEKS_SHOWN   = 16;
+const CACHE_TTL_MS  = 30 * 60 * 1000; // 30 min
+
+// ── Local storage helpers ────────────────────────────────────────────────────
+const ls = {
+  get: k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+  set: (k, v) => localStorage.setItem(k, JSON.stringify(v)),
+  del: k => localStorage.removeItem(k),
+};
+
+const defaultGoals = () => ({ distance: 200, elevation: 3000, longest: 100, rides: 4 });
+const getGoals = () => ls.get('goals') || defaultGoals();
+const saveGoals = g => ls.set('goals', g);
+
+// ── OAuth ────────────────────────────────────────────────────────────────────
+const redirectUri = () => window.location.origin + window.location.pathname;
+
+async function stravaPost(body) {
+  const r = await fetch(STRAVA_TOKEN, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) throw new Error(`Strava token error ${r.status}`);
+  return r.json();
+}
+
+async function exchangeCode(code) {
+  const data = await stravaPost({
+    client_id: ls.get('client_id'),
+    client_secret: ls.get('client_secret'),
+    code,
+    grant_type: 'authorization_code',
+  });
+  storeTokens(data);
+}
+
+async function getAccessToken() {
+  const expiry = ls.get('token_expiry');
+  const token  = ls.get('access_token');
+  if (token && expiry && Date.now() / 1000 < expiry - 60) return token;
+  // Refresh
+  const data = await stravaPost({
+    client_id: ls.get('client_id'),
+    client_secret: ls.get('client_secret'),
+    grant_type: 'refresh_token',
+    refresh_token: ls.get('refresh_token'),
+  });
+  storeTokens(data);
+  return data.access_token;
+}
+
+function storeTokens(data) {
+  ls.set('access_token',  data.access_token);
+  ls.set('refresh_token', data.refresh_token);
+  ls.set('token_expiry',  data.expires_at);
+}
+
+// ── Strava activities ────────────────────────────────────────────────────────
+async function fetchActivities(forceRefresh = false) {
+  const cachedAt = ls.get('cached_at');
+  const cached   = ls.get('activities');
+  if (!forceRefresh && cached && cachedAt && Date.now() - cachedAt < CACHE_TTL_MS) return cached;
+
+  const token = await getAccessToken();
+  const rides = [];
+  let page = 1;
+
+  while (true) {
+    const r = await fetch(`${STRAVA_API}/athlete/activities?per_page=200&page=${page}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!r.ok) throw new Error(`Strava API error ${r.status}`);
+    const batch = await r.json();
+    if (!batch.length) break;
+
+    for (const a of batch) {
+      if (RIDE_TYPES.has(a.type) || RIDE_TYPES.has(a.sport_type)) {
+        rides.push({
+          date:      a.start_date_local || a.start_date,
+          distance:  a.distance / 1000,               // → km
+          elevation: a.total_elevation_gain,           // m
+          name:      a.name,
+        });
+      }
+    }
+    if (batch.length < 200) break;
+    page++;
+  }
+
+  ls.set('activities', rides);
+  ls.set('cached_at', Date.now());
+  return rides;
+}
+
+// ── Week helpers ─────────────────────────────────────────────────────────────
+function isoWeekKey(dateStr) {
+  const d = new Date(dateStr);
+  const day = d.getDay() || 7;
+  d.setDate(d.getDate() + 4 - day);           // shift to Thursday of the week
+  const year = d.getFullYear();
+  const week = Math.ceil(((d - new Date(year, 0, 1)) / 864e5 + 1) / 7);
+  return `${year}-W${String(week).padStart(2, '0')}`;
+}
+
+function weekLabel(key) {
+  const [year, w] = key.split('-W');
+  const weekNum = parseInt(w, 10);
+  const jan4 = new Date(parseInt(year, 10), 0, 4);
+  const monday = new Date(jan4);
+  monday.setDate(jan4.getDate() - (jan4.getDay() || 7) + 1 + (weekNum - 1) * 7);
+  return monday.toLocaleDateString('en', { month: 'short', day: 'numeric' });
+}
+
+function currentWeekKey() { return isoWeekKey(new Date().toISOString()); }
+
+// ── Metrics ──────────────────────────────────────────────────────────────────
+function calcWeeklyMetrics(rides) {
+  const weeks = {};
+  for (const r of rides) {
+    const k = isoWeekKey(r.date);
+    if (!weeks[k]) weeks[k] = { distance: 0, elevation: 0, longest: 0, rides: 0 };
+    weeks[k].distance  += r.distance;
+    weeks[k].elevation += r.elevation;
+    weeks[k].longest    = Math.max(weeks[k].longest, r.distance);
+    weeks[k].rides     += 1;
+  }
+  return weeks;
+}
+
+// ── Charts ───────────────────────────────────────────────────────────────────
+const chartCache = {};
+
+function renderChart(id, labels, values, goal) {
+  if (chartCache[id]) chartCache[id].destroy();
+  const ctx = document.getElementById(id).getContext('2d');
+  chartCache[id] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          data: values,
+          backgroundColor: values.map(v => v >= goal ? 'rgba(34,197,94,0.75)' : 'rgba(252,76,2,0.7)'),
+          borderRadius: 4,
+          order: 2,
+        },
+        {
+          type: 'line',
+          data: labels.map(() => goal),
+          borderColor: '#94a3b8',
+          borderDash: [5, 4],
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: false,
+          order: 1,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false }, tooltip: { callbacks: {
+        label: ctx => ` ${ctx.parsed.y.toLocaleString()}`
+      }}},
+      scales: {
+        y: { beginAtZero: true, grid: { color: '#f4f4f4' }, ticks: { font: { size: 10 } } },
+        x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+      },
+    },
+  });
+}
+
+// ── This-week card ───────────────────────────────────────────────────────────
+function pct(v, g) { return g > 0 ? Math.round(v / g * 100) : 0; }
+
+function progressColor(p) {
+  if (p >= 100) return '#22c55e';
+  if (p >= 65)  return '#f59e0b';
+  return '#ef4444';
+}
+
+function renderThisWeek(weekData, goals) {
+  const d = weekData || { distance: 0, elevation: 0, longest: 0, rides: 0 };
+  const items = [
+    { label: 'Distance',     value: d.distance.toFixed(0),  unit: 'km', goal: goals.distance },
+    { label: 'Elevation',    value: d.elevation.toFixed(0), unit: 'm',  goal: goals.elevation },
+    { label: 'Longest ride', value: d.longest.toFixed(0),   unit: 'km', goal: goals.longest },
+    { label: 'Rides',        value: d.rides,                unit: '',   goal: goals.rides },
+  ];
+  document.getElementById('this-week-metrics').innerHTML = items.map(m => {
+    const p = pct(m.value, m.goal);
+    const color = progressColor(p);
+    return `
+      <div>
+        <div class="metric-label">${m.label}</div>
+        <div class="metric-value" style="color:${color}">
+          ${m.value}<span class="metric-unit">${m.unit ? ' ' + m.unit : ''}</span>
+        </div>
+        <div class="metric-sub">${p}% · goal ${m.goal}${m.unit ? ' ' + m.unit : ''}</div>
+        <div class="progress-bar">
+          <div class="progress-fill" style="width:${Math.min(p, 100)}%;background:${color}"></div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── Full render ──────────────────────────────────────────────────────────────
+function renderDashboard(weeks, goals) {
+  const thisWeek = currentWeekKey();
+  renderThisWeek(weeks[thisWeek], goals);
+
+  const keys   = Object.keys(weeks).sort().slice(-WEEKS_SHOWN);
+  const labels = keys.map(weekLabel);
+
+  renderChart('chart-distance',  labels, keys.map(k => +weeks[k].distance.toFixed(1)),  goals.distance);
+  renderChart('chart-elevation', labels, keys.map(k => Math.round(weeks[k].elevation)), goals.elevation);
+  renderChart('chart-longest',   labels, keys.map(k => +weeks[k].longest.toFixed(1)),   goals.longest);
+  renderChart('chart-rides',     labels, keys.map(k => weeks[k].rides),                 goals.rides);
+}
+
+// ── Load + render pipeline ───────────────────────────────────────────────────
+async function loadAndRender(forceRefresh = false) {
+  const loader = document.getElementById('loading-msg');
+  const errEl  = document.getElementById('error-banner');
+  errEl.classList.add('hidden');
+  loader.classList.remove('hidden');
+  try {
+    const rides = await fetchActivities(forceRefresh);
+    const weeks = calcWeeklyMetrics(rides);
+    renderDashboard(weeks, getGoals());
+
+    const cachedAt = ls.get('cached_at');
+    const syncEl = document.getElementById('sync-info');
+    if (cachedAt) {
+      syncEl.textContent = `Last synced: ${new Date(cachedAt).toLocaleString()} · ${rides.length} rides loaded`;
+      syncEl.classList.remove('hidden');
+    }
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.classList.remove('hidden');
+  } finally {
+    loader.classList.add('hidden');
+  }
+}
+
+// ── Screens ──────────────────────────────────────────────────────────────────
+function show(id) {
+  ['setup-screen','dashboard-screen'].forEach(s =>
+    document.getElementById(s).classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+async function init() {
+  const params = new URLSearchParams(window.location.search);
+  const code   = params.get('code');
+  const oauthError = params.get('error');
+
+  if (oauthError) {
+    show('setup-screen');
+    setupError('Strava denied access: ' + oauthError);
+    return;
+  }
+
+  if (code) {
+    // Clear code from URL immediately
+    window.history.replaceState({}, '', window.location.pathname);
+    try {
+      await exchangeCode(code);
+    } catch (e) {
+      show('setup-screen');
+      setupError('Token exchange failed: ' + e.message);
+      return;
+    }
+  }
+
+  if (ls.get('refresh_token')) {
+    show('dashboard-screen');
+    loadAndRender();
+  } else {
+    show('setup-screen');
+    document.getElementById('callback-domain').textContent = window.location.hostname || 'localhost';
+    const g = getGoals();
+    document.getElementById('g-distance').value  = g.distance;
+    document.getElementById('g-elevation').value = g.elevation;
+    document.getElementById('g-longest').value   = g.longest;
+    document.getElementById('g-rides').value     = g.rides;
+  }
+}
+
+function setupError(msg) {
+  const el = document.getElementById('setup-error');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+
+// ── Events ───────────────────────────────────────────────────────────────────
+document.getElementById('connect-btn').addEventListener('click', () => {
+  const clientId     = document.getElementById('client-id').value.trim();
+  const clientSecret = document.getElementById('client-secret').value.trim();
+  if (!clientId || !clientSecret) { setupError('Please enter Client ID and Client Secret.'); return; }
+
+  const goals = {
+    distance:  parseFloat(document.getElementById('g-distance').value)  || 200,
+    elevation: parseFloat(document.getElementById('g-elevation').value) || 3000,
+    longest:   parseFloat(document.getElementById('g-longest').value)   || 100,
+    rides:     parseFloat(document.getElementById('g-rides').value)     || 4,
+  };
+  ls.set('client_id',     clientId);
+  ls.set('client_secret', clientSecret);
+  saveGoals(goals);
+
+  const url = `${STRAVA_AUTH}?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri())}&response_type=code&scope=activity:read_all`;
+  window.location.href = url;
+});
+
+document.getElementById('refresh-btn').addEventListener('click', () => loadAndRender(true));
+
+document.getElementById('goals-btn').addEventListener('click', () => {
+  const panel = document.getElementById('goals-panel');
+  const opening = panel.classList.contains('hidden');
+  panel.classList.toggle('hidden');
+  if (opening) {
+    const g = getGoals();
+    document.getElementById('sg-distance').value  = g.distance;
+    document.getElementById('sg-elevation').value = g.elevation;
+    document.getElementById('sg-longest').value   = g.longest;
+    document.getElementById('sg-rides').value     = g.rides;
+  }
+});
+
+document.getElementById('save-goals-btn').addEventListener('click', () => {
+  saveGoals({
+    distance:  parseFloat(document.getElementById('sg-distance').value),
+    elevation: parseFloat(document.getElementById('sg-elevation').value),
+    longest:   parseFloat(document.getElementById('sg-longest').value),
+    rides:     parseFloat(document.getElementById('sg-rides').value),
+  });
+  document.getElementById('goals-panel').classList.add('hidden');
+  const weeks = calcWeeklyMetrics(ls.get('activities') || []);
+  renderDashboard(weeks, getGoals());
+});
+
+document.getElementById('disconnect-btn').addEventListener('click', () => {
+  if (confirm('Disconnect Strava and clear all local data?')) {
+    localStorage.clear();
+    window.location.reload();
+  }
+});
+
+init();
+</script>
+</body>
+</html>
